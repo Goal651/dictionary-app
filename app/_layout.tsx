@@ -2,8 +2,8 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../global.css';
-
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -15,13 +15,9 @@ export default function RootLayout() {
   }
 
   return (
-    <>
-
+    <SafeAreaProvider>
       <Stack screenOptions={{ headerShown: false }} />
-      {/* <GlobalNavigation/> */}
-      <StatusBar style="light" />
-    </>
-
+      <StatusBar style="dark" />
+    </SafeAreaProvider>
   );
 }
-
