@@ -178,7 +178,13 @@ export default function DrawerMenu({
           <View style={[styles.currentWordBanner, { backgroundColor: t.accentLight, borderColor: t.border }]}>
             <MaterialIcons name="book" size={13} color={t.accent} />
             <Text style={[styles.currentWordLabel, { color: t.textMuted }]}>Viewing: </Text>
-            <Text style={[styles.currentWordValue, { color: t.accent }]}>{currentWord}</Text>
+            <Text
+              style={[styles.currentWordValue, { color: t.accent }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {currentWord}
+            </Text>
           </View>
         )}
 
@@ -272,6 +278,8 @@ export default function DrawerMenu({
                         { color: isActive ? t.accent : t.textSecondary },
                         isActive && { fontWeight: '700' },
                       ]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
                     >
                       {item}
                     </Text>
@@ -410,11 +418,14 @@ const styles = StyleSheet.create({
   },
   currentWordLabel: {
     fontSize: 11,
+    flexShrink: 0,
   },
   currentWordValue: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
+    flex: 1,
+    flexShrink: 1,
   },
   divider: {
     height: 1,

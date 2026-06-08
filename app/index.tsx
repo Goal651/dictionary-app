@@ -124,7 +124,7 @@ function DictionaryApp() {
         {loading && (
           <Animated.View entering={FadeIn.duration(200)} style={styles.loadingBox}>
             <ActivityIndicator size="large" color={t.accent} />
-            <Text style={[styles.loadingText, { color: t.textMuted }]}>
+            <Text style={[styles.loadingText, { color: t.textMuted }]} numberOfLines={2} ellipsizeMode="tail">
               Looking up "{lastSearchedWord}"…
             </Text>
           </Animated.View>

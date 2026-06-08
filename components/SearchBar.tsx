@@ -153,6 +153,8 @@ export default SearchBar;
 
 const styles = StyleSheet.create({
   row: {
+    width:'100%',
+    overflow:"hidden",
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
@@ -178,9 +180,11 @@ const styles = StyleSheet.create({
   },
   searchIcon: {
     marginRight: 6,
+    width:'10%',
   },
   input: {
     flex: 1,
+    width:'70%',
     height: 50,
     fontSize: 16,
     color: '#1f2937',
@@ -189,7 +193,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   button: {
-    width: 40,
+    width: '20%',
     height: 40,
     borderRadius: 10,
     backgroundColor: '#3b82f6',

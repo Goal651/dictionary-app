@@ -38,6 +38,12 @@ export default function ErrorCard({
   const iconBg = isNotFound ? '#fff7ed' : isNetwork ? '#eff6ff' : '#fff1f2';
   const iconColor = isNotFound ? '#f59e0b' : isNetwork ? '#3b82f6' : '#ef4444';
 
+  // Truncate long words for display
+  const truncateWord = (word: string, maxLength: number = 20) => {
+    if (word.length <= maxLength) return word;
+    return `${word.substring(0, maxLength)}...`;
+  };
+
   return (
     <Animated.View entering={FadeInDown.duration(350)} style={[styles.container, t && { backgroundColor: t.bgCard }]}>
       <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
@@ -56,7 +62,13 @@ export default function ErrorCard({
             accessibilityRole="button"
           >
             <MaterialIcons name="refresh" size={17} color="#fff" />
-            <Text style={styles.retryText}>Retry "{lastWord}"</Text>
+            <Text 
+              style={styles.retryText} 
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              Retry "{truncateWord(lastWord)}"
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -131,11 +143,16 @@ const styles = StyleSheet.create({
     gap: 10,
     flexWrap: 'wrap',
     justifyContent: 'center',
+    width: '100%', // Ensure actions container respects parent width
   },
   retryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center', // Center content horizontally
     gap: 6,
+    flex: 1,
+    minWidth: 120, // Minimum width for smaller screens
+    maxWidth: '100%', // Prevent overflow
     backgroundColor: '#3b82f6',
     paddingHorizontal: 18,
     paddingVertical: 10,
@@ -145,11 +162,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 14,
+    flexShrink: 1, // Allow text to shrink if needed
   },
   newSearchBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
+    flex: 1,
+    minWidth: 120,
+    maxWidth: '100%',
     backgroundColor: '#eff6ff',
     paddingHorizontal: 18,
     paddingVertical: 10,

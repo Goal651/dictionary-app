@@ -52,10 +52,19 @@ export default function WordCard({ entry, theme: t }: WordCardProps) {
       {/* ── Word header card ── */}
       <Animated.View entering={FadeInDown.duration(350)} style={[styles.header, t && { backgroundColor: t.bgCard }]}>
         <View style={styles.wordRow}>
-          <Text style={[styles.word, t && { color: t.textPrimary }]} numberOfLines={2} adjustsFontSizeToFit>
+          <Text
+            style={[styles.word, t && { color: t.textPrimary }]}
+            numberOfLines={10}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+          >
             {entry.word}
           </Text>
-          {audioUrl ? <AudioButton audioUrl={audioUrl} /> : null}
+          {audioUrl ? (
+            <View style={styles.audioWrapper}>
+              <AudioButton audioUrl={audioUrl} />
+            </View>
+          ) : null}
         </View>
 
         {phoneticText ? (
@@ -140,7 +149,10 @@ export default function WordCard({ entry, theme: t }: WordCardProps) {
                       {def.synonyms?.length > 0 && (
                         <View style={styles.inlineTagRow}>
                           <Text style={[styles.inlineTagLabel, t && { color: t.textMuted }]}>e.g. </Text>
-                          <Text style={[styles.inlineTagBlue, t && { color: t.accent }]}>
+                          <Text
+                            style={[styles.inlineTagBlue, t && { color: t.accent }]}
+                            numberOfLines={2}
+                          >
                             {def.synonyms.slice(0, 4).join(', ')}
                           </Text>
                         </View>
@@ -185,7 +197,13 @@ export default function WordCard({ entry, theme: t }: WordCardProps) {
       })}
 
       {entry.sourceUrls?.length > 0 && (
-        <Text style={[styles.source, t && { color: t.border }]}>📖 Source: {entry.sourceUrls[0]}</Text>
+        <Text
+          style={[styles.source, t && { color: t.border }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          📖 {entry.sourceUrls[0]}
+        </Text>
       )}
     </ScrollView>
   );
@@ -209,15 +227,22 @@ const styles = StyleSheet.create({
   },
   wordRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    paddingRight:30,
+    gap: 8,
+  },
+  audioWrapper: {
+    flexShrink: 0,
+    marginTop: 4,
   },
   word: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '800',
     color: '#1e3a5f',
     letterSpacing: -0.5,
     flex: 1,
+    flexShrink: 1,
   },
   phonetic: {
     fontSize: 17,
@@ -242,6 +267,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 12,
   },
@@ -350,16 +376,20 @@ const styles = StyleSheet.create({
   },
   inlineTagRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginTop: 4,
+    alignItems: 'flex-start',
   },
   inlineTagLabel: {
     fontSize: 12,
     color: '#9ca3af',
+    flexShrink: 0,
   },
   inlineTagBlue: {
     fontSize: 12,
     color: '#3b82f6',
     flexShrink: 1,
+    flex: 1,
   },
 
   // Synonym / antonym chips
@@ -406,5 +436,6 @@ const styles = StyleSheet.create({
     color: '#d1d5db',
     marginTop: 6,
     textAlign: 'center',
+    paddingHorizontal: 8,
   },
 });
