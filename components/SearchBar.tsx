@@ -1,3 +1,4 @@
+import { Theme } from '@/contexts/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import {
@@ -13,6 +14,7 @@ import {
 interface SearchBarProps {
   onSearch: (word: string) => void;
   loading?: boolean;
+  theme?: Theme;
 }
 
 export interface SearchBarRef {
@@ -21,7 +23,8 @@ export interface SearchBarRef {
   focus: () => void;
 }
 
-const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(({ onSearch, loading }, ref) => {
+const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(({ onSearch, loading, theme }, ref) => {
+  const t = theme;
   const [query, setQuery] = useState('');
   const [validationError, setValidationError] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -84,7 +87,9 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(({ onSearch, loading 
       <Animated.View
         style={[
           styles.row,
+          t && { backgroundColor: t.bgInput, borderColor: t.border },
           isFocused && styles.rowFocused,
+          isFocused && t && { borderColor: t.borderFocus },
           validationError && styles.rowError,
           { transform: [{ translateX: shakeAnim }] },
         ]}
@@ -92,14 +97,14 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(({ onSearch, loading 
         <MaterialIcons
           name="search"
           size={20}
-          color={validationError ? '#ef4444' : isFocused ? '#3b82f6' : '#9ca3af'}
+          color={validationError ? '#ef4444' : isFocused ? (t?.accent ?? '#3b82f6') : (t?.textMuted ?? '#9ca3af')}
           style={styles.searchIcon}
         />
         <TextInput
           ref={inputRef}
-          style={styles.input}
+          style={[styles.input, t && { color: t.textSecondary }]}
           placeholder="Search a word..."
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={t?.textMuted ?? '#9ca3af'}
           value={query}
           onChangeText={(text) => {
             setQuery(text);
@@ -115,11 +120,11 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(({ onSearch, loading 
         />
         {query.length > 0 && !loading && (
           <TouchableOpacity onPress={handleClear} style={styles.clearBtn} accessibilityLabel="Clear search">
-            <MaterialIcons name="cancel" size={18} color="#9ca3af" />
+            <MaterialIcons name="cancel" size={18} color={t?.textMuted ?? '#9ca3af'} />
           </TouchableOpacity>
         )}
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, { backgroundColor: t?.accent ?? '#3b82f6' }, loading && styles.buttonDisabled]}
           onPress={handleSubmit}
           disabled={loading}
           accessibilityLabel="Search"

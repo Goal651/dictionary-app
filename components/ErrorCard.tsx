@@ -1,3 +1,4 @@
+import { Theme } from '@/contexts/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -8,6 +9,7 @@ interface ErrorCardProps {
   message: string;
   resolution: string;
   lastWord?: string;
+  theme?: Theme;
   onRetry?: () => void;
   onSearchAgain?: (word: string) => void;
 }
@@ -17,6 +19,7 @@ export default function ErrorCard({
   message,
   resolution,
   lastWord,
+  theme: t,
   onRetry,
   onSearchAgain,
 }: ErrorCardProps) {
@@ -36,20 +39,19 @@ export default function ErrorCard({
   const iconColor = isNotFound ? '#f59e0b' : isNetwork ? '#3b82f6' : '#ef4444';
 
   return (
-    <Animated.View entering={FadeInDown.duration(350)} style={styles.container}>
+    <Animated.View entering={FadeInDown.duration(350)} style={[styles.container, t && { backgroundColor: t.bgCard }]}>
       <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
         <MaterialIcons name={icon} size={48} color={iconColor} />
       </View>
 
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
-      {resolution ? <Text style={styles.resolution}>{resolution}</Text> : null}
+      <Text style={[styles.title, t && { color: t.textPrimary }]}>{title}</Text>
+      <Text style={[styles.message, t && { color: t.textSecondary }]}>{message}</Text>
+      {resolution ? <Text style={[styles.resolution, t && { color: t.textMuted }]}>{resolution}</Text> : null}
 
       <View style={styles.actions}>
-        {/* Retry: re-search the same word */}
         {onSearchAgain && lastWord && (
           <TouchableOpacity
-            style={styles.retryBtn}
+            style={[styles.retryBtn, t && { backgroundColor: t.accent }]}
             onPress={() => onSearchAgain(lastWord)}
             accessibilityRole="button"
           >
@@ -58,26 +60,24 @@ export default function ErrorCard({
           </TouchableOpacity>
         )}
 
-        {/* Clear error and go back to search */}
         {onRetry && (
           <TouchableOpacity
-            style={styles.newSearchBtn}
+            style={[styles.newSearchBtn, t && { backgroundColor: t.accentLight, borderColor: t.border }]}
             onPress={onRetry}
             accessibilityRole="button"
           >
-            <MaterialIcons name="search" size={17} color="#3b82f6" />
-            <Text style={styles.newSearchText}>New Search</Text>
+            <MaterialIcons name="search" size={17} color={t?.accent ?? '#3b82f6'} />
+            <Text style={[styles.newSearchText, t && { color: t.accent }]}>New Search</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Suggestions for not-found */}
       {isNotFound && (
-        <View style={styles.tipsBox}>
-          <Text style={styles.tipsTitle}>Tips</Text>
-          <Text style={styles.tipItem}>• Check the spelling of the word</Text>
-          <Text style={styles.tipItem}>• Try searching for the base/root form</Text>
-          <Text style={styles.tipItem}>• Only English words are supported</Text>
+        <View style={[styles.tipsBox, t && { backgroundColor: t.bgSection }]}>
+          <Text style={[styles.tipsTitle, t && { color: t.textMuted }]}>Tips</Text>
+          <Text style={[styles.tipItem, t && { color: t.textMuted }]}>• Check the spelling of the word</Text>
+          <Text style={[styles.tipItem, t && { color: t.textMuted }]}>• Try searching for the base/root form</Text>
+          <Text style={[styles.tipItem, t && { color: t.textMuted }]}>• Only English words are supported</Text>
         </View>
       )}
     </Animated.View>

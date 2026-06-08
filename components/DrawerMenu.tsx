@@ -1,9 +1,11 @@
+import { ThemeName, useTheme } from '@/contexts/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Animated,
     Dimensions,
     FlatList,
+    PanResponder,
     StyleSheet,
     Text,
     TextInput,
@@ -13,7 +15,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const DRAWER_WIDTH = Dimensions.get('window').width * 0.78;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DRAWER_WIDTH = SCREEN_WIDTH * 0.78;
+// how far right the user must drag before drawer auto-closes
+const SWIPE_CLOSE_THRESHOLD = DRAWER_WIDTH * 0.35;
 
 interface DrawerMenuProps {
   visible: boolean;
@@ -32,102 +37,161 @@ export default function DrawerMenu({
   onSelectWord,
   onClearHistory,
 }: DrawerMenuProps) {
+  const { theme, allThemes, setTheme } = useTheme();
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const [filterQuery, setFilterQuery] = useState('');
   const [mounted, setMounted] = useState(false);
 
+  // ── open / close animation ──────────────────────────────────────────────────
+  const openDrawer = () => {
+    setMounted(true);
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 4,
+        speed: 16,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeDrawer = (cb?: () => void) => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: -DRAWER_WIDTH,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setMounted(false);
+      setFilterQuery('');
+      cb?.();
+    });
+  };
+
   useEffect(() => {
     if (visible) {
-      setMounted(true);
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          useNativeDriver: true,
-          bounciness: 4,
-          speed: 16,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      openDrawer();
     } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: -DRAWER_WIDTH,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setMounted(false);
-        setFilterQuery('');
-      });
+      closeDrawer();
     }
   }, [visible]);
 
+  // ── swipe-to-close pan responder ────────────────────────────────────────────
+  const panResponder = useRef(
+    PanResponder.create({
+      // only capture horizontal drags
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 8 && Math.abs(gs.dx) > Math.abs(gs.dy) && gs.dx > 0,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dx > 0) {
+          slideAnim.setValue(-gs.dx);
+        }
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx > SWIPE_CLOSE_THRESHOLD || gs.vx > 0.5) {
+          closeDrawer(onClose);
+        } else {
+          // snap back
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 6,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  // ── filtered history ────────────────────────────────────────────────────────
   const filteredHistory = filterQuery.trim()
     ? history.filter((w) => w.toLowerCase().includes(filterQuery.toLowerCase()))
     : history;
 
   if (!mounted) return null;
 
+  // ── dynamic styles that depend on theme ─────────────────────────────────────
+  const t = theme;
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
-      {/* Backdrop */}
-      <TouchableWithoutFeedback onPress={onClose}>
+      {/* Backdrop — tap to close */}
+      <TouchableWithoutFeedback onPress={() => closeDrawer(onClose)}>
         <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
       </TouchableWithoutFeedback>
 
       {/* Drawer panel */}
       <Animated.View
+        {...panResponder.panHandlers}
         style={[
           styles.drawer,
-          { transform: [{ translateX: slideAnim }], paddingTop: insets.top + 8 },
+          {
+            backgroundColor: t.drawerBg,
+            transform: [{ translateX: slideAnim }],
+            paddingTop: insets.top + 8,
+            borderRightColor: t.drawerBorder,
+          },
         ]}
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <View style={styles.drawerHeader}>
           <View style={styles.logoRow}>
-            <View style={styles.logoCircle}>
+            <View style={[styles.logoCircle, { backgroundColor: t.accent }]}>
               <Text style={styles.logoLetter}>L</Text>
             </View>
             <View>
-              <Text style={styles.appName}>LexiDict</Text>
-              <Text style={styles.appTagline}>English Dictionary</Text>
+              <Text style={[styles.appName, { color: t.textPrimary }]}>LexiDict</Text>
+              <Text style={[styles.appTagline, { color: t.textMuted }]}>English Dictionary</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel="Close menu">
-            <MaterialIcons name="close" size={22} color="#6b7280" />
+
+          {/* ✕ Close button — always visible */}
+          <TouchableOpacity
+            onPress={() => closeDrawer(onClose)}
+            style={[styles.closeBtn, { backgroundColor: t.accentLight }]}
+            accessibilityLabel="Close menu"
+            accessibilityRole="button"
+          >
+            <MaterialIcons name="close" size={20} color={t.accent} />
           </TouchableOpacity>
         </View>
 
-        {/* Current word pill */}
+        {/* Swipe hint */}
+        <Text style={[styles.swipeHint, { color: t.textMuted }]}>
+          ← swipe right to close
+        </Text>
+
+        {/* Current word banner */}
         {currentWord && (
-          <View style={styles.currentWordBanner}>
-            <MaterialIcons name="book" size={14} color="#3b82f6" />
-            <Text style={styles.currentWordLabel}>Currently viewing: </Text>
-            <Text style={styles.currentWordValue}>{currentWord}</Text>
+          <View style={[styles.currentWordBanner, { backgroundColor: t.accentLight, borderColor: t.border }]}>
+            <MaterialIcons name="book" size={13} color={t.accent} />
+            <Text style={[styles.currentWordLabel, { color: t.textMuted }]}>Viewing: </Text>
+            <Text style={[styles.currentWordValue, { color: t.accent }]}>{currentWord}</Text>
           </View>
         )}
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: t.drawerBorder }]} />
 
-        {/* Section header + clear */}
+        {/* ── History section header ── */}
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleRow}>
-            <MaterialIcons name="history" size={16} color="#3b82f6" />
-            <Text style={styles.sectionTitle}>Search History</Text>
+            <MaterialIcons name="history" size={15} color={t.accent} />
+            <Text style={[styles.sectionTitle, { color: t.textSecondary }]}>Search History</Text>
             {history.length > 0 && (
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{history.length}</Text>
+              <View style={[styles.countBadge, { backgroundColor: t.accentLight }]}>
+                <Text style={[styles.countText, { color: t.accent }]}>{history.length}</Text>
               </View>
             )}
           </View>
@@ -138,14 +202,14 @@ export default function DrawerMenu({
           )}
         </View>
 
-        {/* Filter input — only show if more than 4 items */}
+        {/* Filter — show when > 4 items */}
         {history.length > 4 && (
-          <View style={styles.filterRow}>
-            <MaterialIcons name="filter-list" size={16} color="#9ca3af" />
+          <View style={[styles.filterRow, { backgroundColor: t.bgInput, borderColor: t.border }]}>
+            <MaterialIcons name="filter-list" size={15} color={t.textMuted} />
             <TextInput
-              style={styles.filterInput}
+              style={[styles.filterInput, { color: t.textSecondary }]}
               placeholder="Filter history..."
-              placeholderTextColor="#c4b5fd"
+              placeholderTextColor={t.textMuted}
               value={filterQuery}
               onChangeText={setFilterQuery}
               autoCapitalize="none"
@@ -153,24 +217,28 @@ export default function DrawerMenu({
             />
             {filterQuery.length > 0 && (
               <TouchableOpacity onPress={() => setFilterQuery('')}>
-                <MaterialIcons name="cancel" size={16} color="#9ca3af" />
+                <MaterialIcons name="cancel" size={15} color={t.textMuted} />
               </TouchableOpacity>
             )}
           </View>
         )}
 
-        {/* History list */}
+        {/* ── History list ── */}
         <View style={styles.listContainer}>
           {history.length === 0 ? (
             <View style={styles.emptyHistory}>
-              <MaterialIcons name="manage-search" size={48} color="#e5e7eb" />
-              <Text style={styles.emptyText}>No searches yet</Text>
-              <Text style={styles.emptySubText}>Words you search will appear here</Text>
+              <MaterialIcons name="manage-search" size={44} color={t.border} />
+              <Text style={[styles.emptyText, { color: t.textMuted }]}>No searches yet</Text>
+              <Text style={[styles.emptySubText, { color: t.border }]}>
+                Words you search will appear here
+              </Text>
             </View>
           ) : filteredHistory.length === 0 ? (
             <View style={styles.emptyHistory}>
-              <MaterialIcons name="search-off" size={40} color="#e5e7eb" />
-              <Text style={styles.emptyText}>No match for "{filterQuery}"</Text>
+              <MaterialIcons name="search-off" size={38} color={t.border} />
+              <Text style={[styles.emptyText, { color: t.textMuted }]}>
+                No match for "{filterQuery}"
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -181,35 +249,85 @@ export default function DrawerMenu({
                 const isActive = item.toLowerCase() === currentWord?.toLowerCase();
                 return (
                   <TouchableOpacity
-                    style={[styles.historyItem, isActive && styles.historyItemActive]}
+                    style={[
+                      styles.historyItem,
+                      { borderBottomColor: t.drawerBorder },
+                      isActive && { backgroundColor: t.accentLight },
+                    ]}
                     onPress={() => {
                       onSelectWord(item);
-                      onClose();
+                      closeDrawer(onClose);
                     }}
                     accessibilityRole="button"
                     accessibilityLabel={`Search ${item}`}
                   >
-                    <View style={styles.historyIndex}>
-                      <Text style={styles.historyIndexText}>{index + 1}</Text>
+                    <View style={[styles.historyIndex, { backgroundColor: t.bgCard }]}>
+                      <Text style={[styles.historyIndexText, { color: t.textMuted }]}>
+                        {index + 1}
+                      </Text>
                     </View>
-                    <Text style={[styles.historyWord, isActive && styles.historyWordActive]}>
+                    <Text
+                      style={[
+                        styles.historyWord,
+                        { color: isActive ? t.accent : t.textSecondary },
+                        isActive && { fontWeight: '700' },
+                      ]}
+                    >
                       {item}
                     </Text>
                     {isActive && (
-                      <View style={styles.activePill}>
-                        <Text style={styles.activePillText}>active</Text>
+                      <View style={[styles.activePill, { backgroundColor: t.accentLight }]}>
+                        <Text style={[styles.activePillText, { color: t.accent }]}>now</Text>
                       </View>
                     )}
                     <MaterialIcons
                       name="chevron-right"
                       size={16}
-                      color={isActive ? '#3b82f6' : '#d1d5db'}
+                      color={isActive ? t.accent : t.border}
                     />
                   </TouchableOpacity>
                 );
               }}
             />
           )}
+        </View>
+
+        {/* ── Theme picker (footer) ── */}
+        <View style={[styles.themeSection, { borderTopColor: t.drawerBorder }]}>
+          <View style={styles.themeLabelRow}>
+            <MaterialIcons name="palette" size={15} color={t.accent} />
+            <Text style={[styles.themeLabel, { color: t.textMuted }]}>Theme</Text>
+          </View>
+          <View style={styles.themeChips}>
+            {allThemes.map((th) => {
+              const active = th.name === t.name;
+              return (
+                <TouchableOpacity
+                  key={th.name}
+                  onPress={() => setTheme(th.name as ThemeName)}
+                  style={[
+                    styles.themeChip,
+                    {
+                      backgroundColor: active ? t.accent : t.bgCard,
+                      borderColor: active ? t.accent : t.border,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Switch to ${th.label} theme`}
+                >
+                  <Text style={styles.themeEmoji}>{th.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.themeChipText,
+                      { color: active ? '#fff' : t.textMuted },
+                    ]}
+                  >
+                    {th.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </Animated.View>
     </View>
@@ -219,7 +337,7 @@ export default function DrawerMenu({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   drawer: {
     position: 'absolute',
@@ -227,11 +345,11 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: '#fff',
+    borderRightWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 6, height: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
+    shadowOffset: { width: 8, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
     elevation: 20,
   },
   drawerHeader: {
@@ -239,7 +357,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingBottom: 14,
+    paddingBottom: 4,
   },
   logoRow: {
     flexDirection: 'row',
@@ -247,59 +365,59 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logoCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#3b82f6',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoLetter: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
   },
   appName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#1e3a5f',
   },
   appTagline: {
-    fontSize: 11,
-    color: '#9ca3af',
+    fontSize: 10,
   },
   closeBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  swipeHint: {
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: 8,
+    letterSpacing: 0.3,
   },
   currentWordBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#eff6ff',
     marginHorizontal: 18,
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     marginBottom: 10,
     gap: 4,
+    borderWidth: 1,
   },
   currentWordLabel: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: 11,
   },
   currentWordValue: {
-    fontSize: 12,
-    color: '#3b82f6',
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
   },
   divider: {
     height: 1,
-    backgroundColor: '#f3f4f6',
     marginHorizontal: 18,
     marginBottom: 12,
   },
@@ -308,7 +426,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -316,49 +434,45 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#374151',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   countBadge: {
-    backgroundColor: '#dbeafe',
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 1,
     marginLeft: 4,
   },
   countText: {
-    fontSize: 11,
-    color: '#3b82f6',
+    fontSize: 10,
     fontWeight: '700',
   },
   clearAllBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
   clearAllText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#ef4444',
     fontWeight: '600',
   },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
     borderRadius: 8,
     marginHorizontal: 18,
     marginBottom: 8,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     gap: 6,
+    borderWidth: 1,
   },
   filterInput: {
     flex: 1,
     fontSize: 13,
-    color: '#374151',
-    height: 26,
+    height: 24,
   },
   listContainer: {
     flex: 1,
@@ -367,65 +481,93 @@ const styles = StyleSheet.create({
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 11,
+    paddingVertical: 10,
     paddingHorizontal: 8,
     borderRadius: 10,
     marginBottom: 2,
-  },
-  historyItemActive: {
-    backgroundColor: '#eff6ff',
+    borderBottomWidth: 1,
   },
   historyIndex: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#f3f4f6',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   historyIndexText: {
     fontSize: 10,
-    color: '#9ca3af',
     fontWeight: '600',
   },
   historyWord: {
     flex: 1,
-    fontSize: 15,
-    color: '#374151',
+    fontSize: 14,
     textTransform: 'capitalize',
   },
-  historyWordActive: {
-    color: '#3b82f6',
-    fontWeight: '700',
-  },
   activePill: {
-    backgroundColor: '#dbeafe',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginRight: 4,
   },
   activePillText: {
-    fontSize: 10,
-    color: '#3b82f6',
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   emptyHistory: {
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: 40,
     gap: 8,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#9ca3af',
+    fontSize: 13,
     fontWeight: '600',
   },
   emptySubText: {
     fontSize: 12,
-    color: '#d1d5db',
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+
+  // ── Theme picker ──
+  themeSection: {
+    borderTopWidth: 1,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  themeLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 10,
+  },
+  themeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  themeChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  themeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1.5,
+  },
+  themeEmoji: {
+    fontSize: 13,
+  },
+  themeChipText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

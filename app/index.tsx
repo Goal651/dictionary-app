@@ -4,16 +4,17 @@ import ErrorCard from '@/components/ErrorCard';
 import SearchBar, { SearchBarRef } from '@/components/SearchBar';
 import WordCard from '@/components/WordCard';
 import { DictionaryProvider, useDictionary } from '@/contexts/DictionaryContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -28,37 +29,30 @@ function DictionaryApp() {
     clearError,
     clearHistory,
   } = useDictionary();
+  const { theme } = useTheme();
+  const t = theme;
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const searchBarRef = useRef<SearchBarRef>(null);
 
-  // Called by SearchBar — just forward to context
-  const handleSearch = (word: string) => {
-    searchWord(word);
-  };
+  const handleSearch = (word: string) => searchWord(word);
 
-  // Called from drawer history list
-  // 1. Sync the input field value so user sees what was selected
-  // 2. Trigger search
   const handleHistorySelect = (word: string) => {
     searchBarRef.current?.setValue(word);
     searchWord(word);
   };
 
-  // Retry the last searched word from ErrorCard
   const handleRetryWord = (word: string) => {
     searchBarRef.current?.setValue(word);
     searchWord(word);
   };
 
-  // "New Search" — clear error and focus input
   const handleNewSearch = () => {
     clearError();
     searchBarRef.current?.clear();
     searchBarRef.current?.focus();
   };
 
-  // Suggestion chip tapped on empty state
   const handleSuggestion = (word: string) => {
     searchBarRef.current?.setValue(word);
     searchWord(word);
@@ -67,34 +61,41 @@ function DictionaryApp() {
   const showEmpty = !loading && !error && !wordEntry;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+    <SafeAreaView style={[styles.safe, { backgroundColor: t.bg }]}>
+      <StatusBar
+        barStyle={t.statusBar}
+        backgroundColor={t.bgSection}
+      />
 
       {/* ── Top bar ── */}
-      <View style={styles.topBar}>
+      <View
+        style={[
+          styles.topBar,
+          { backgroundColor: t.bgSection, borderBottomColor: t.border },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => setDrawerOpen(true)}
-          style={styles.iconBtn}
+          style={[styles.iconBtn, { backgroundColor: t.accentLight }]}
           accessibilityLabel="Open menu"
           accessibilityRole="button"
         >
-          <MaterialIcons name="menu" size={26} color="#1e3a5f" />
+          <MaterialIcons name="menu" size={22} color={t.accent} />
         </TouchableOpacity>
 
         <View style={styles.titleBlock}>
-          <Text style={styles.topTitle}>LexiDict</Text>
-          <Text style={styles.topSubtitle}>English Dictionary</Text>
+          <Text style={[styles.topTitle, { color: t.textPrimary }]}>LexiDict</Text>
+          <Text style={[styles.topSubtitle, { color: t.textMuted }]}>English Dictionary</Text>
         </View>
 
-        {/* History count badge */}
         <TouchableOpacity
           onPress={() => setDrawerOpen(true)}
-          style={styles.iconBtn}
+          style={[styles.iconBtn, { backgroundColor: t.accentLight }]}
           accessibilityLabel={`History — ${history.length} words`}
         >
-          <MaterialIcons name="history" size={24} color="#6b7280" />
+          <MaterialIcons name="history" size={22} color={t.accent} />
           {history.length > 0 && (
-            <View style={styles.badge}>
+            <View style={[styles.badge, { backgroundColor: t.accent }]}>
               <Text style={styles.badgeText}>
                 {history.length > 9 ? '9+' : history.length}
               </Text>
@@ -104,25 +105,31 @@ function DictionaryApp() {
       </View>
 
       {/* ── Search bar ── */}
-      <View style={styles.searchSection}>
+      <View
+        style={[
+          styles.searchSection,
+          { backgroundColor: t.bgSection, borderBottomColor: t.border },
+        ]}
+      >
         <SearchBar
           ref={searchBarRef}
           onSearch={handleSearch}
           loading={loading}
+          theme={t}
         />
       </View>
 
-      {/* ── Content area ── */}
+      {/* ── Content ── */}
       <View style={styles.content}>
-        {/* Loading skeleton */}
         {loading && (
           <Animated.View entering={FadeIn.duration(200)} style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text style={styles.loadingText}>Looking up "{lastSearchedWord}"…</Text>
+            <ActivityIndicator size="large" color={t.accent} />
+            <Text style={[styles.loadingText, { color: t.textMuted }]}>
+              Looking up "{lastSearchedWord}"…
+            </Text>
           </Animated.View>
         )}
 
-        {/* Error state */}
         {!loading && error && (
           <ErrorCard
             title={error.title}
@@ -131,17 +138,16 @@ function DictionaryApp() {
             lastWord={lastSearchedWord}
             onRetry={handleNewSearch}
             onSearchAgain={handleRetryWord}
+            theme={t}
           />
         )}
 
-        {/* Empty / welcome state */}
         {showEmpty && (
-          <EmptyState onSuggestionPress={handleSuggestion} />
+          <EmptyState onSuggestionPress={handleSuggestion} theme={t} />
         )}
 
-        {/* Word result */}
         {!loading && !error && wordEntry && (
-          <WordCard entry={wordEntry} />
+          <WordCard entry={wordEntry} theme={t} />
         )}
       </View>
 
@@ -160,91 +166,73 @@ function DictionaryApp() {
 
 export default function IndexScreen() {
   return (
-    <DictionaryProvider>
-      <DictionaryApp />
-    </DictionaryProvider>
+    <ThemeProvider>
+      <DictionaryProvider>
+        <DictionaryApp />
+      </DictionaryProvider>
+    </ThemeProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-
-  // Top bar
+  safe: { flex: 1 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  titleBlock: {
-    alignItems: 'center',
-  },
+  titleBlock: { alignItems: 'center' },
   topTitle: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#1e3a5f',
     letterSpacing: -0.3,
   },
   topSubtitle: {
     fontSize: 10,
-    color: '#9ca3af',
     letterSpacing: 0.5,
   },
   badge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#3b82f6',
+    top: 3,
+    right: 3,
     borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    minWidth: 15,
+    height: 15,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 3,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: 8,
     color: '#fff',
     fontWeight: '800',
   },
-
-  // Search
   searchSection: {
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 12,
     paddingBottom: 10,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
   },
-
-  // Content
   content: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
   },
-
-  // Loading
   loadingBox: {
     flex: 1,
     justifyContent: 'center',
@@ -254,7 +242,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 15,
-    color: '#6b7280',
     fontStyle: 'italic',
   },
 });

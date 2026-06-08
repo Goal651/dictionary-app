@@ -1,3 +1,4 @@
+import { Theme } from '@/contexts/ThemeContext';
 import { WordEntry } from '@/types';
 import React, { useState } from 'react';
 import {
@@ -12,9 +13,10 @@ import AudioButton from './AudioButton';
 
 interface WordCardProps {
   entry: WordEntry;
+  theme?: Theme;
 }
 
-export default function WordCard({ entry }: WordCardProps) {
+export default function WordCard({ entry, theme: t }: WordCardProps) {
   const [expandedMeanings, setExpandedMeanings] = useState<Record<number, boolean>>({});
 
   const audioUrl = entry.phonetics?.find((p) => p.audio)?.audio ?? '';
@@ -48,16 +50,16 @@ export default function WordCard({ entry }: WordCardProps) {
       keyboardShouldPersistTaps="handled"
     >
       {/* ── Word header card ── */}
-      <Animated.View entering={FadeInDown.duration(350)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(350)} style={[styles.header, t && { backgroundColor: t.bgCard }]}>
         <View style={styles.wordRow}>
-          <Text style={styles.word} numberOfLines={2} adjustsFontSizeToFit>
+          <Text style={[styles.word, t && { color: t.textPrimary }]} numberOfLines={2} adjustsFontSizeToFit>
             {entry.word}
           </Text>
           {audioUrl ? <AudioButton audioUrl={audioUrl} /> : null}
         </View>
 
         {phoneticText ? (
-          <Text style={styles.phonetic}>{phoneticText}</Text>
+          <Text style={[styles.phonetic, t && { color: t.textMuted }]}>{phoneticText}</Text>
         ) : null}
 
         {/* All phonetic variants */}
@@ -67,23 +69,23 @@ export default function WordCard({ entry }: WordCardProps) {
               .filter((p) => p.text && p.text !== phoneticText)
               .slice(0, 3)
               .map((p, i) => (
-                <Text key={i} style={styles.phoneticVariant}>
+                <Text key={i} style={[styles.phoneticVariant, t && { backgroundColor: t.bgSection, color: t.textMuted }]}>
                   {p.text}
                 </Text>
               ))}
           </View>
         )}
 
-        {/* Meanings count chip */}
+        {/* Stats chips */}
         <View style={styles.statsRow}>
-          <View style={styles.statChip}>
-            <Text style={styles.statChipText}>
+          <View style={[styles.statChip, t && { backgroundColor: t.accentLight, borderColor: t.border }]}>
+            <Text style={[styles.statChipText, t && { color: t.accentText }]}>
               {entry.meanings?.length ?? 0} meaning{entry.meanings?.length !== 1 ? 's' : ''}
             </Text>
           </View>
           {entry.meanings?.reduce((acc, m) => acc + m.definitions.length, 0) > 0 && (
-            <View style={styles.statChip}>
-              <Text style={styles.statChipText}>
+            <View style={[styles.statChip, t && { backgroundColor: t.accentLight, borderColor: t.border }]}>
+              <Text style={[styles.statChipText, t && { color: t.accentText }]}>
                 {entry.meanings.reduce((acc, m) => acc + m.definitions.length, 0)} definition
                 {entry.meanings.reduce((acc, m) => acc + m.definitions.length, 0) !== 1 ? 's' : ''}
               </Text>
@@ -94,7 +96,7 @@ export default function WordCard({ entry }: WordCardProps) {
 
       {/* ── Meanings ── */}
       {entry.meanings?.map((meaning, mIdx) => {
-        const isExpanded = expandedMeanings[mIdx] !== false; // default expanded
+        const isExpanded = expandedMeanings[mIdx] !== false;
         const posColor = getPosColor(meaning.partOfSpeech);
         const previewDef = meaning.definitions[0];
 
@@ -102,9 +104,8 @@ export default function WordCard({ entry }: WordCardProps) {
           <Animated.View
             key={mIdx}
             entering={FadeInDown.delay(mIdx * 80).duration(350)}
-            style={styles.meaningBlock}
+            style={[styles.meaningBlock, t && { backgroundColor: t.bgCard }]}
           >
-            {/* POS header row — tap to collapse/expand */}
             <TouchableOpacity
               style={styles.posRow}
               onPress={() => toggleMeaning(mIdx)}
@@ -115,32 +116,31 @@ export default function WordCard({ entry }: WordCardProps) {
                   {meaning.partOfSpeech}
                 </Text>
               </View>
-              <View style={styles.posDivider} />
-              <Text style={styles.defCount}>
+              <View style={[styles.posDivider, t && { backgroundColor: t.border }]} />
+              <Text style={[styles.defCount, t && { color: t.textMuted }]}>
                 {meaning.definitions.length} def.
               </Text>
-              <Text style={styles.collapseIcon}>{isExpanded ? '▲' : '▼'}</Text>
+              <Text style={[styles.collapseIcon, t && { color: t.textMuted }]}>{isExpanded ? '▲' : '▼'}</Text>
             </TouchableOpacity>
 
             {isExpanded ? (
               <>
                 {meaning.definitions.map((def, dIdx) => (
                   <View key={dIdx} style={styles.definitionItem}>
-                    <View style={styles.defBullet}>
-                      <Text style={styles.defBulletText}>{dIdx + 1}</Text>
+                    <View style={[styles.defBullet, t && { backgroundColor: t.accentLight }]}>
+                      <Text style={[styles.defBulletText, t && { color: t.accent }]}>{dIdx + 1}</Text>
                     </View>
                     <View style={styles.defBody}>
-                      <Text style={styles.defText}>{def.definition}</Text>
+                      <Text style={[styles.defText, t && { color: t.textSecondary }]}>{def.definition}</Text>
                       {def.example ? (
-                        <View style={styles.exampleBox}>
-                          <Text style={styles.exampleText}>"{def.example}"</Text>
+                        <View style={[styles.exampleBox, t && { borderLeftColor: t.accent }]}>
+                          <Text style={[styles.exampleText, t && { color: t.textMuted }]}>"{def.example}"</Text>
                         </View>
                       ) : null}
-                      {/* Per-definition synonyms */}
                       {def.synonyms?.length > 0 && (
                         <View style={styles.inlineTagRow}>
-                          <Text style={styles.inlineTagLabel}>e.g. </Text>
-                          <Text style={styles.inlineTagBlue}>
+                          <Text style={[styles.inlineTagLabel, t && { color: t.textMuted }]}>e.g. </Text>
+                          <Text style={[styles.inlineTagBlue, t && { color: t.accent }]}>
                             {def.synonyms.slice(0, 4).join(', ')}
                           </Text>
                         </View>
@@ -149,24 +149,22 @@ export default function WordCard({ entry }: WordCardProps) {
                   </View>
                 ))}
 
-                {/* Synonyms */}
                 {meaning.synonyms?.length > 0 && (
                   <View style={styles.tagSection}>
-                    <Text style={styles.tagLabel}>Synonyms</Text>
+                    <Text style={[styles.tagLabel, t && { color: t.textMuted }]}>Synonyms</Text>
                     <View style={styles.tagChips}>
                       {meaning.synonyms.slice(0, 8).map((s, i) => (
-                        <View key={i} style={[styles.chip, styles.chipBlue]}>
-                          <Text style={styles.chipTextBlue}>{s}</Text>
+                        <View key={i} style={[styles.chip, styles.chipBlue, t && { backgroundColor: t.accentLight, borderColor: t.border }]}>
+                          <Text style={[styles.chipTextBlue, t && { color: t.accentText }]}>{s}</Text>
                         </View>
                       ))}
                     </View>
                   </View>
                 )}
 
-                {/* Antonyms */}
                 {meaning.antonyms?.length > 0 && (
                   <View style={styles.tagSection}>
-                    <Text style={styles.tagLabel}>Antonyms</Text>
+                    <Text style={[styles.tagLabel, t && { color: t.textMuted }]}>Antonyms</Text>
                     <View style={styles.tagChips}>
                       {meaning.antonyms.slice(0, 8).map((a, i) => (
                         <View key={i} style={[styles.chip, styles.chipRed]}>
@@ -178,8 +176,7 @@ export default function WordCard({ entry }: WordCardProps) {
                 )}
               </>
             ) : (
-              /* Collapsed preview */
-              <Text style={styles.collapsedPreview} numberOfLines={2}>
+              <Text style={[styles.collapsedPreview, t && { color: t.textMuted }]} numberOfLines={2}>
                 {previewDef?.definition}
               </Text>
             )}
@@ -187,9 +184,8 @@ export default function WordCard({ entry }: WordCardProps) {
         );
       })}
 
-      {/* Source URL */}
       {entry.sourceUrls?.length > 0 && (
-        <Text style={styles.source}>📖 Source: {entry.sourceUrls[0]}</Text>
+        <Text style={[styles.source, t && { color: t.border }]}>📖 Source: {entry.sourceUrls[0]}</Text>
       )}
     </ScrollView>
   );

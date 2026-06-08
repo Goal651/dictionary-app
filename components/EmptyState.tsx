@@ -1,3 +1,4 @@
+import { Theme } from '@/contexts/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -5,11 +6,12 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 interface EmptyStateProps {
   onSuggestionPress?: (word: string) => void;
+  theme?: Theme;
 }
 
 const SUGGESTIONS = ['eloquent', 'serendipity', 'ephemeral', 'resilient', 'melancholy'];
 
-export default function EmptyState({ onSuggestionPress }: EmptyStateProps) {
+export default function EmptyState({ onSuggestionPress, theme: t }: EmptyStateProps) {
   return (
     <View style={styles.container}>
       <Animated.View entering={FadeIn.duration(500)} style={styles.iconWrap}>
