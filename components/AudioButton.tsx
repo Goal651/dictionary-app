@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
-import React, { useRef, useState } from 'react';
+import { createAudioPlayer } from 'expo-audio';
+import React, { useState, useEffect, useRef } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface AudioButtonProps {
@@ -8,68 +8,61 @@ interface AudioButtonProps {
 }
 
 export default function AudioButton({ audioUrl }: AudioButtonProps) {
-  const [loading, setLoading] = useState(false);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const activePlayerRef = useRef<any>(null);
 
-  const cleanup = async () => {
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync();
-      soundRef.current = null;
+  // 1. Clean the Dictionary API URL string
+  const getCleanUrl = (url: string): string | null => {
+    if (!url || url.trim() === "") return null;
+    if (url.startsWith('//')) {
+      return `https:${url}`;
     }
+    return url;
   };
 
+  const cleanUrl = getCleanUrl(audioUrl);
 
-  // Cleanup on component unmount
-  React.useEffect(() => {
+  // 2. Clean up when the user leaves or component unmounts
+  useEffect(() => {
     return () => {
-      cleanup();
+      if (activePlayerRef.current) {
+        activePlayerRef.current.remove();
+        activePlayerRef.current.release();
+      }
     };
   }, []);
-  if (!audioUrl) return null;
 
-
+  if (!cleanUrl) return null;
 
   const handlePress = async () => {
-    if (loading) return;
-
-    setLoading(true);
     try {
-      // Clean up previous sound if exists
-      await cleanup();
+      // If a track is already playing, clear it out immediately
+      if (activePlayerRef.current) {
+        activePlayerRef.current.remove();
+        activePlayerRef.current.release();
+        activePlayerRef.current = null;
+      }
 
-      // Configure audio mode for playback
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-      });
+      setIsPlaying(true);
 
-      // Load and play the audio
-      console.log('Loading audio from:', audioUrl);
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
-        { shouldPlay: true } // Auto-play immediately
-      );
+      // Fix: Use the correct factory function instead of "new" constructor
+      const player = createAudioPlayer(cleanUrl);
+      activePlayerRef.current = player;
 
-      soundRef.current = sound;
+      player.play();
 
-      // Optional: Add callback for when playback finishes
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          cleanup();
-        }
-      });
+      // Dictionary API audio clips are incredibly short (usually under 1.5 seconds)
+      // This timeout cleanly clears the indicator state after playback completes
+      setTimeout(() => {
+        setIsPlaying(false);
+      }, 1500);
 
     } catch (error) {
       console.error('Playback error:', error);
       Alert.alert('Error', 'Failed to play pronunciation audio.');
-      await cleanup();
-    } finally {
-      setLoading(false);
+      setIsPlaying(false);
     }
   };
-
 
   return (
     <TouchableOpacity
@@ -77,9 +70,8 @@ export default function AudioButton({ audioUrl }: AudioButtonProps) {
       style={styles.btn}
       accessibilityLabel="Play pronunciation"
       accessibilityRole="button"
-      disabled={loading}
     >
-      {loading ? (
+      {isPlaying ? (
         <ActivityIndicator size="small" color="#3b82f6" />
       ) : (
         <MaterialIcons name="volume-up" size={22} color="#3b82f6" />

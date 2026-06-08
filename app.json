@@ -40,7 +40,6 @@
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
-      
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -71,12 +70,7 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
-        }
-      ]
+      "expo-audio"
     ],
     "extra": {
       "router": {

@@ -1,8 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosProgressEvent, CancelToken } from 'axios';
 import { API_CONFIG, } from './constants';
-import { ApiResponse, ApiError, DownloadResponse } from '@/types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { encode } from 'base-64';
+import { ApiResponse, ApiError} from '@/types';
 import { router } from 'expo-router';
 
 
