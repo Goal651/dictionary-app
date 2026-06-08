@@ -7,8 +7,10 @@ interface DictionaryContextType {
   loading: boolean;
   error: ErrorResponse | null;
   history: string[];
+  lastSearchedWord: string;
   searchWord: (word: string) => Promise<void>;
   clearError: () => void;
+  clearHistory: () => void;
 }
 
 const DictionaryContext = createContext<DictionaryContextType | undefined>(undefined);
@@ -18,24 +20,25 @@ function DictionaryProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ErrorResponse | null>(null);
   const [history, setHistory] = useState<string[]>([]);
+  const [lastSearchedWord, setLastSearchedWord] = useState<string>('');
 
   const searchWord = async (word: string) => {
-    const trimmed = word.trim();
+    const trimmed = word.trim().toLowerCase();
     if (!trimmed) return;
 
     setLoading(true);
     setError(null);
     setWordEntry(null);
+    setLastSearchedWord(trimmed);
 
     try {
       const result = await searchService.search(trimmed);
       setWordEntry(result);
 
-      // Add to history (no duplicates, most-recent first)
+      // Deduplicate: remove existing entry (case-insensitive), add to front
       setHistory((prev) => {
-        const lower = trimmed.toLowerCase();
-        const filtered = prev.filter((w) => w.toLowerCase() !== lower);
-        return [trimmed, ...filtered].slice(0, 50); // keep last 50
+        const filtered = prev.filter((w) => w.toLowerCase() !== trimmed);
+        return [trimmed, ...filtered].slice(0, 50);
       });
     } catch (err: any) {
       setError({
@@ -48,10 +51,17 @@ function DictionaryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const clearError = () => setError(null);
+  const clearError = () => {
+    setError(null);
+    setWordEntry(null);
+  };
+
+  const clearHistory = () => setHistory([]);
 
   return (
-    <DictionaryContext.Provider value={{ wordEntry, loading, error, history, searchWord, clearError }}>
+    <DictionaryContext.Provider
+      value={{ wordEntry, loading, error, history, lastSearchedWord, searchWord, clearError, clearHistory }}
+    >
       {children}
     </DictionaryContext.Provider>
   );
