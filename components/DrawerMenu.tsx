@@ -323,7 +323,6 @@ export default function DrawerMenu({
                   accessibilityRole="button"
                   accessibilityLabel={`Switch to ${th.label} theme`}
                 >
-                  <Text style={styles.themeEmoji}>{th.emoji}</Text>
                   <Text
                     style={[
                       styles.themeChipText,

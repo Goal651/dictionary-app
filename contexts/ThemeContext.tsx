@@ -7,7 +7,6 @@ export type ThemeName = 'light' | 'dark' | 'ocean' | 'forest';
 export interface Theme {
   name: ThemeName;
   label: string;
-  emoji: string;
   // Backgrounds
   bg: string;
   bgCard: string;
@@ -36,7 +35,6 @@ const themes: Record<ThemeName, Theme> = {
   light: {
     name: 'light',
     label: 'Light',
-    emoji: '☀️',
     bg: '#f8fafc',
     bgCard: '#ffffff',
     bgInput: '#ffffff',
@@ -57,7 +55,6 @@ const themes: Record<ThemeName, Theme> = {
   dark: {
     name: 'dark',
     label: 'Dark',
-    emoji: '🌙',
     bg: '#0f172a',
     bgCard: '#1e293b',
     bgInput: '#1e293b',
@@ -78,7 +75,6 @@ const themes: Record<ThemeName, Theme> = {
   ocean: {
     name: 'ocean',
     label: 'Ocean',
-    emoji: '🌊',
     bg: '#0c1445',
     bgCard: '#162060',
     bgInput: '#1a2570',
@@ -99,7 +95,6 @@ const themes: Record<ThemeName, Theme> = {
   forest: {
     name: 'forest',
     label: 'Forest',
-    emoji: '🌿',
     bg: '#0a1f0a',
     bgCard: '#14321a',
     bgInput: '#1a3d20',
